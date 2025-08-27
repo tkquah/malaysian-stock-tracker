@@ -2,10 +2,8 @@ name: Malaysian Stock Market Tracker
 
 on:
   schedule:
-    # 9:00 AM Malaysia time (1:00 AM UTC) on weekdays
-    - cron: '0 1 * * 1-5'
-    # 5:00 PM Malaysia time (9:00 AM UTC) on weekdays  
-    - cron: '0 9 * * 1-5'
+    # 6:30 PM Malaysia time (10:30 AM UTC) on weekdays
+    - cron: '30 10 * * 1-5'
   workflow_dispatch: # Allows manual trigger for testing
 
 jobs:
@@ -26,20 +24,48 @@ jobs:
         python -m pip install --upgrade pip
         pip install yfinance pandas pytz
     
-    - name: Run stock tracker
+    - name: Run stock tracker with email
+      env:
+        GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
       run: |
         python stock_scraper.py
     
-    - name: Upload stock data
+    - name: Upload stock data as backup
       uses: actions/upload-artifact@v4
       with:
-        name: stock-data-${{ github.run_number }}
+        name: malaysian-stock-data-${{ github.run_number }}
         path: '*.csv'
         if-no-files-found: ignore
-        retention-days: 30
+        retention-days: 7
     
-    - name: Display completion message
-      run: |
-        echo "✅ Stock tracking completed successfully!"
-        echo "📁 CSV files have been uploaded as artifacts"
-        echo "🕐 Next run scheduled according to cron schedule"
+    - name: Send email notification using GitHub's email action
+      if: always()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: malaysianstocktracker@gmail.com
+        password: ${{ secrets.GMAIL_APP_PASSWORD }}
+        subject: "Malaysian Stock Report - ${{ github.run_number }}"
+        to: tkquahinv@gmail.com
+        from: Malaysian Stock Tracker
+        body: |
+          Hello,
+          
+          Your Malaysian stock market report has been generated successfully!
+          
+          📊 Report Details:
+          - Date: ${{ github.event.head_commit.timestamp }}
+          - Run Number: ${{ github.run_number }}
+          - Status: ${{ job.status }}
+          
+          📎 You can download the detailed CSV file from the GitHub Actions artifacts.
+          
+          📈 The system automatically tracks your selected Malaysian stocks and runs every weekday at 6:30 PM Malaysia time.
+          
+          Best regards,
+          Your Automated Stock Tracker
+          
+          ---
+          This report is for informational purposes only.
+        attachments: "*.csv"
