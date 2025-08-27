@@ -5,6 +5,11 @@ import time
 import sys
 import os
 import csv
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 def get_closing_prices_yfinance(stock_symbols):
     """
@@ -61,27 +66,17 @@ def get_closing_prices_yfinance(stock_symbols):
     return closing_prices
 
 def save_to_csv(data_to_save):
-    """Saves stock data to a CSV file in a specified folder."""
+    """Saves stock data to a CSV file."""
     if not data_to_save:
         print("No data to save.")
-        return False
+        return None
 
-    # Check if running locally (Windows path exists) or in GitHub Actions
-    local_folder = r'E:\Investment list for Malaysia stocks\Closing price'
-    
-    if os.path.exists(os.path.dirname(local_folder)) or os.name == 'nt':
-        # Running locally on Windows
-        folder_path = local_folder
-        print(f"💻 Running locally - saving to: {folder_path}")
-    else:
-        # Running in GitHub Actions or other cloud environment
-        folder_path = os.getcwd()
-        print(f"☁️ Running in cloud - saving to current directory: {folder_path}")
-    
+    # Save to current directory (works for both local and cloud)
+    folder_path = os.getcwd()
     os.makedirs(folder_path, exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f'closing_prices_{timestamp}.csv'
+    filename = f'malaysian_stocks_{timestamp}.csv'
     file_path = os.path.join(folder_path, filename)
     
     try:
@@ -89,10 +84,113 @@ def save_to_csv(data_to_save):
         df = pd.DataFrame.from_dict(data_to_save, orient='index')
         df.to_csv(file_path, index=False)
         print(f"\n✅ Data saved successfully to: {file_path}")
-        return True
+        return file_path
     except Exception as e:
         print(f"❌ Error saving to CSV: {e}")
+        return None
+
+def send_email_with_attachment(csv_file_path, stock_summary):
+    """Send email with CSV attachment using Gmail SMTP"""
+    
+    # Email configuration
+    sender_email = "malaysianstocktracker@gmail.com"  # We'll create this
+    sender_password = "your_app_password_here"  # Will be set via GitHub secrets
+    recipient_email = "tkquahinv@gmail.com"
+    
+    # Create message
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = f"Malaysian Stock Report - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    
+    # Create email body with stock summary
+    body = f"""
+Hello,
+
+Your Malaysian stock market report is ready!
+
+📊 STOCK SUMMARY ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}):
+
+{stock_summary}
+
+📎 Detailed data is attached as a CSV file.
+
+📈 Top Gainers and Losers will be highlighted in the attachment.
+
+Best regards,
+Malaysian Stock Tracker Bot
+
+---
+This is an automated message. Data is for informational purposes only.
+    """
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    # Attach CSV file
+    if csv_file_path and os.path.exists(csv_file_path):
+        try:
+            with open(csv_file_path, "rb") as attachment:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(attachment.read())
+                
+            encoders.encode_base64(part)
+            part.add_header(
+                'Content-Disposition',
+                f'attachment; filename= {os.path.basename(csv_file_path)}'
+            )
+            msg.attach(part)
+            print("✅ CSV file attached to email")
+            
+        except Exception as e:
+            print(f"❌ Error attaching file: {e}")
+    
+    # Send email
+    try:
+        # Use environment variable for password (more secure)
+        password = os.environ.get('GMAIL_APP_PASSWORD', sender_password)
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, password)
+        
+        text = msg.as_string()
+        server.sendmail(sender_email, recipient_email, text)
+        server.quit()
+        
+        print(f"✅ Email sent successfully to {recipient_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error sending email: {e}")
         return False
+
+def generate_stock_summary(stock_data):
+    """Generate a text summary of stock performance"""
+    if not stock_data:
+        return "No stock data available."
+    
+    df = pd.DataFrame.from_dict(stock_data, orient='index')
+    
+    # Sort by percentage change
+    df_sorted = df.sort_values('change_pct', ascending=False)
+    
+    summary = []
+    summary.append("TOP 5 GAINERS:")
+    summary.append("-" * 40)
+    for i, (_, row) in enumerate(df_sorted.head(5).iterrows()):
+        summary.append(f"{i+1}. {row['company_name'][:20]:<20} {row['change_pct']:+6.2f}%")
+    
+    summary.append("\nTOP 5 LOSERS:")
+    summary.append("-" * 40)
+    for i, (_, row) in enumerate(df_sorted.tail(5).iterrows()):
+        summary.append(f"{i+1}. {row['company_name'][:20]:<20} {row['change_pct']:+6.2f}%")
+    
+    summary.append(f"\nTotal stocks tracked: {len(df)}")
+    summary.append(f"Gainers: {len(df[df['change_pct'] > 0])}")
+    summary.append(f"Losers: {len(df[df['change_pct'] < 0])}")
+    summary.append(f"Unchanged: {len(df[df['change_pct'] == 0])}")
+    
+    return "\n".join(summary)
 
 def is_market_day():
     """Check if today is a weekday (market day)"""
@@ -106,7 +204,7 @@ def run_stock_scraper():
     """
     Main function to run the stock scraping and reporting.
     """
-    print(f"🚀 Malaysian Stock Tracker - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🚀 Malaysian Stock Tracker with Email - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Check if it's a market day
     if not is_market_day():
@@ -124,6 +222,7 @@ def run_stock_scraper():
         "UOAREIT": "5110.KL", "YTLPowr": "6742.KL"
     }
 
+    print(f"📊 Fetching data for {len(stock_symbols)} Malaysian stocks...")
     stock_data = get_closing_prices_yfinance(stock_symbols)
 
     if not stock_data:
@@ -133,10 +232,10 @@ def run_stock_scraper():
     # Create a DataFrame from the dictionary
     df = pd.DataFrame.from_dict(stock_data, orient='index')
 
-    # Reorder columns to place 'last_done' after 'prev_close' and remove 'volume'
+    # Reorder columns to place 'last_done' after 'prev_close'
     df = df[['company_name', 'symbol', 'prev_close', 'last_done', 'high', 'low', 'change', 'change_pct']]
 
-    # Format the output with a clean table
+    # Display summary in console
     print("\n" + "=" * 95)
     print(f"Market Report for {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 95)
@@ -163,9 +262,24 @@ def run_stock_scraper():
     print("Disclaimer: Data is provided for informational purposes only and is not intended for trading purposes.")
     print("=" * 95)
     
-    # Call the function to save the data to a CSV file
-    save_to_csv(stock_data)
-    print("🎉 Stock tracking completed!")
+    # Save to CSV file
+    print("\n📁 Saving data to CSV...")
+    csv_file_path = save_to_csv(stock_data)
+    
+    # Generate summary for email
+    stock_summary = generate_stock_summary(stock_data)
+    
+    # Send email with attachment
+    if csv_file_path:
+        print("\n📧 Sending email with CSV attachment...")
+        email_sent = send_email_with_attachment(csv_file_path, stock_summary)
+        
+        if email_sent:
+            print("✅ Report successfully sent to tkquahinv@gmail.com")
+        else:
+            print("❌ Failed to send email, but CSV file is saved locally")
+    
+    print("🎉 Malaysian Stock Tracker completed!")
 
 if __name__ == "__main__":
     run_stock_scraper()
