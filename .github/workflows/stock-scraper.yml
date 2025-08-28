@@ -44,11 +44,11 @@ jobs:
       with:
         server_address: smtp.gmail.com
         server_port: 587
-        username: malaysianstocktracker@gmail.com
+        username: tkquahinv@gmail.com
         password: ${{ secrets.GMAIL_APP_PASSWORD }}
         subject: "Malaysian Stock Report - ${{ github.run_number }}"
         to: tkquahinv@gmail.com
-        from: Malaysian Stock Tracker
+        from: tkquahinv@gmail.com
         body: |
           Hello,
           
@@ -59,7 +59,7 @@ jobs:
           - Run Number: ${{ github.run_number }}
           - Status: ${{ job.status }}
           
-          📎 You can download the detailed CSV file from the GitHub Actions artifacts.
+          🔍 You can download the detailed CSV file from the GitHub Actions artifacts.
           
           📈 The system automatically tracks your selected Malaysian stocks and runs every weekday at 6:30 PM Malaysia time.
           
