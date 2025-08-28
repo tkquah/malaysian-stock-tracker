@@ -86,16 +86,16 @@ def save_to_csv(data_to_save):
         print(f"\n✅ Data saved successfully to: {file_path}")
         return file_path
     except Exception as e:
-        print(f"❌ Error saving to CSV: {e}")
+        print(f"⌐ Error saving to CSV: {e}")
         return None
 
 def send_email_with_attachment(csv_file_path, stock_summary):
     """Send email with CSV attachment using Gmail SMTP"""
     
-    # Email configuration
-    sender_email = "malaysianstocktracker@gmail.com"  # We'll create this
+    # Email configuration - UPDATED TO USE YOUR GMAIL
+    sender_email = "tkquahinv@gmail.com"  # Changed to your Gmail
     sender_password = "your_app_password_here"  # Will be set via GitHub secrets
-    recipient_email = "tkquahinv@gmail.com"
+    recipient_email = "tkquahinv@gmail.com"  # Sending to yourself
     
     # Create message
     msg = MIMEMultipart()
@@ -113,7 +113,7 @@ Your Malaysian stock market report is ready!
 
 {stock_summary}
 
-📎 Detailed data is attached as a CSV file.
+🔍 Detailed data is attached as a CSV file.
 
 📈 Top Gainers and Losers will be highlighted in the attachment.
 
@@ -142,7 +142,7 @@ This is an automated message. Data is for informational purposes only.
             print("✅ CSV file attached to email")
             
         except Exception as e:
-            print(f"❌ Error attaching file: {e}")
+            print(f"⌐ Error attaching file: {e}")
     
     # Send email
     try:
@@ -161,7 +161,7 @@ This is an automated message. Data is for informational purposes only.
         return True
         
     except Exception as e:
-        print(f"❌ Error sending email: {e}")
+        print(f"⌐ Error sending email: {e}")
         return False
 
 def generate_stock_summary(stock_data):
@@ -263,7 +263,7 @@ def run_stock_scraper():
     print("=" * 95)
     
     # Save to CSV file
-    print("\n📁 Saving data to CSV...")
+    print("\n💾 Saving data to CSV...")
     csv_file_path = save_to_csv(stock_data)
     
     # Generate summary for email
@@ -277,7 +277,7 @@ def run_stock_scraper():
         if email_sent:
             print("✅ Report successfully sent to tkquahinv@gmail.com")
         else:
-            print("❌ Failed to send email, but CSV file is saved locally")
+            print("⌐ Failed to send email, but CSV file is saved locally")
     
     print("🎉 Malaysian Stock Tracker completed!")
 
