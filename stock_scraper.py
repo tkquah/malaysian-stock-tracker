@@ -212,7 +212,7 @@ def run_stock_scraper():
         return
 
     stock_symbols = {
-        "Apex Healthcare": "7090.KL", "BAuto": "5248.KL", "Bursa": "1818.KL", "CARLSBG": "2836.KL", "CIMB": "1023.KL", "Dayang": "5141.KL",
+        "AHealth": "7090.KL", "BAuto": "5248.KL", "Bursa": "1818.KL", "CARLSBG": "2836.KL", "CIMB": "1023.KL", "Dayang": "5141.KL",
         "GenM": "4715.KL", "HapSeng": "3034.KL", "HEIM": "3255.KL", "HLC": "5274.KL", "HSPlant": "5138.KL",
         "IGBCR": "5299.KL", "IGBREIT": "5227.KL", "IJM": "3336.KL", "Inari": "0166.KL",
         "KIPREIT": "5280.KL", "Kim Loong Resources Berhad": "5027.KL", "Magnum Berhad": "3859.KL", "Maxis": "6012.KL",
@@ -283,5 +283,6 @@ def run_stock_scraper():
 
 if __name__ == "__main__":
     run_stock_scraper()
+
 
 
